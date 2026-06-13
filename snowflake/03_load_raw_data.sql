@@ -1,42 +1,50 @@
 -- ============================================================
--- PROJECT: Olist Pricing Intelligence
--- FILE: 03_load_raw_data.sql
--- DESCRIPTION: Loads all 9 CSV files from the Snowflake internal
---              stage (raw_stage) into the RAW schema tables.
---              Uses COPY INTO command — Snowflake native bulk load.
---              Prerequisites:
---              - 01_setup_environment.sql must have been executed
---              - 02_create_raw_tables.sql must have been executed
---              - CSV files must be uploaded to raw_stage
--- AUTHOR: Gisele CP
--- DATE: 2026-06-06
+-- PROJETO: Olist Pricing Intelligence
+-- ARQUIVO: 03_load_raw_data.sql
+-- DESCRIÇÃO: Carrega os 9 arquivos CSV do stage interno do
+--             Snowflake (raw_stage) para as tabelas da camada RAW.
+--             Utiliza o comando COPY INTO — mecanismo nativo de
+--             carga em massa do Snowflake.
+-------------------------------------------
+
+--             Pré-requisitos:
+--             - 01_setup_environment.sql executado
+--             - 02_create_raw_tables.sql executado
+--             - Arquivos CSV enviados para o raw_stage
+-- AUTORA: Gisele CP
+-- DATA: 2026-06-06
 -- ============================================================
 
--- COPY INTO OVERVIEW
--- COPY INTO is Snowflake native bulk load command.
--- It reads files from a stage and loads into a table.
--- FILE_FORMAT parameters:
---   TYPE = CSV              -> file format
---   FIELD_OPTIONALLY_ENCLOSED_BY = '"' -> handles fields wrapped in quotes
---   SKIP_HEADER = 1         -> skips the first row (column headers)
--- The stage @olist_db.raw.raw_stage was created manually
--- via Snowflake UI and contains all 9 CSV files uploaded.
+-- VISÃO GERAL DO COPY INTO
+-- COPY INTO é o comando nativo de carga em massa do Snowflake.
+-- Ele lê arquivos de um stage e os carrega para uma tabela.
+------------------------------------------------------------
+
+-- Parâmetros FILE_FORMAT:
+--   TYPE = CSV -> formato do arquivo
+--   FIELD_OPTIONALLY_ENCLOSED_BY = '"' -> trata campos envolvidos por aspas
+--   SKIP_HEADER = 1 -> ignora a primeira linha (cabeçalho)
+-----------------------------------------------------------
+
+-- O stage @olist_db.raw.raw_stage foi criado manualmente
+-- pela interface do Snowflake e contém os 9 arquivos CSV.
 
 -- ============================================================
--- CONTEXT SETUP
+-- CONFIGURAÇÃO DE CONTEXTO
 -- ============================================================
--- Sets the active warehouse, database and schema for this session.
+-- Define o warehouse, banco de dados e schema ativos
+-- para esta sessão.
 -- ============================================================
 
-USE WAREHOUSE olist_wh;   -- compute layer for data loading
-USE DATABASE olist_db;    -- project database
-USE SCHEMA raw;           -- target schema for raw data loading
+USE WAREHOUSE olist_wh;   -- camada computacional para carga de dados
+USE DATABASE olist_db;    -- banco de dados do projeto
+USE SCHEMA raw;           -- schema de destino para os dados brutos
 
 -- ============================================================
--- LOAD 1: CUSTOMERS
+-- CARGA 1: CUSTOMERS
 -- ============================================================
--- Loads customer registration data.
--- Expected rows: ~99,441
+-- Carrega os dados cadastrais dos clientes.
+-- Linhas esperadas: ~99.441
 -- ============================================================
 
 COPY INTO olist_db.raw.customers
@@ -44,11 +52,11 @@ FROM @olist_db.raw.raw_stage/olist_customers_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 2: GEOLOCATION
+-- CARGA 2: GEOLOCATION
 -- ============================================================
--- Loads zip code to coordinates mapping.
--- Expected rows: ~1,000,163 — largest file in the dataset.
--- May take slightly longer to load due to volume.
+-- Carrega o mapeamento entre CEPs e coordenadas geográficas.
+-- Linhas esperadas: ~1.000.163 — maior arquivo do dataset.
+-- Pode levar um pouco mais de tempo devido ao volume.
 -- ============================================================
 
 COPY INTO olist_db.raw.geolocation
@@ -56,11 +64,11 @@ FROM @olist_db.raw.raw_stage/olist_geolocation_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 3: ORDER ITEMS
+-- CARGA 3: ORDER ITEMS
 -- ============================================================
--- Loads item-level order data including price and freight.
--- This is the most critical table for pricing analysis.
--- Expected rows: ~112,650
+-- Carrega os dados dos itens dos pedidos, incluindo preço e frete.
+-- Esta é a tabela mais importante para as análises de precificação.
+-- Linhas esperadas: ~112.650
 -- ============================================================
 
 COPY INTO olist_db.raw.order_items
@@ -68,12 +76,13 @@ FROM @olist_db.raw.raw_stage/olist_order_items_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 4: ORDER PAYMENTS
+-- CARGA 4: ORDER PAYMENTS
 -- ============================================================
--- Loads payment details per order.
--- Expected rows: ~103,886
--- Note: more rows than orders because one order can have
--- multiple payment records (installments or split payments).
+-- Carrega os detalhes de pagamento dos pedidos.
+-- Linhas esperadas: ~103.886
+-- Observação: existem mais registros do que pedidos porque
+-- um pedido pode possuir múltiplos pagamentos
+-- (parcelamentos ou pagamentos divididos).
 -- ============================================================
 
 COPY INTO olist_db.raw.order_payments
@@ -81,11 +90,12 @@ FROM @olist_db.raw.raw_stage/olist_order_payments_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 5: ORDER REVIEWS
+-- CARGA 5: ORDER REVIEWS
 -- ============================================================
--- Loads customer satisfaction reviews.
--- Expected rows: ~99,224
--- Note: comment fields have high null rate — this is expected.
+-- Carrega as avaliações de satisfação dos clientes.
+-- Linhas esperadas: ~99.224
+-- Observação: os campos de comentário possuem alta taxa de nulos,
+-- o que é esperado.
 -- ============================================================
 
 COPY INTO olist_db.raw.order_reviews
@@ -93,10 +103,11 @@ FROM @olist_db.raw.raw_stage/olist_order_reviews_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 6: ORDERS
+-- CARGA 6: ORDERS
 -- ============================================================
--- Loads master order data — central hub of the data model.
--- Expected rows: ~99,441
+-- Carrega os dados principais dos pedidos.
+-- Principal fonte transacional para construção do modelo analítico.
+-- Linhas esperadas: ~99.441
 -- ============================================================
 
 COPY INTO olist_db.raw.orders
@@ -104,11 +115,12 @@ FROM @olist_db.raw.raw_stage/olist_orders_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 7: PRODUCTS
+-- CARGA 7: PRODUCTS
 -- ============================================================
--- Loads product catalog with categories and dimensions.
--- Expected rows: ~32,951
--- Note: 610 nulls in product_category_name — treated in STAGING.
+-- Carrega o catálogo de produtos com categorias e dimensões.
+-- Linhas esperadas: ~32.951
+-- Observação: existem 610 valores nulos em product_category_name.
+-- O tratamento será realizado posteriormente na camada STAGING.
 -- ============================================================
 
 COPY INTO olist_db.raw.products
@@ -116,10 +128,10 @@ FROM @olist_db.raw.raw_stage/olist_products_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 8: SELLERS
+-- CARGA 8: SELLERS
 -- ============================================================
--- Loads seller registration data.
--- Expected rows: ~3,095
+-- Carrega os dados cadastrais dos vendedores.
+-- Linhas esperadas: ~3.095
 -- ============================================================
 
 COPY INTO olist_db.raw.sellers
@@ -127,11 +139,12 @@ FROM @olist_db.raw.raw_stage/olist_sellers_dataset.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- LOAD 9: CATEGORY TRANSLATION
+-- CARGA 9: CATEGORY TRANSLATION
 -- ============================================================
--- Loads Portuguese to English category name mapping.
--- Expected rows: 71
--- Used in STAGING and MARTS to standardize category labels.
+-- Carrega o mapeamento de categorias do português para inglês.
+-- Linhas esperadas: 71
+-- Utilizado nas camadas STAGING e MARTS para padronização
+-- dos nomes das categorias.
 -- ============================================================
 
 COPY INTO olist_db.raw.category_translation
@@ -139,14 +152,21 @@ FROM @olist_db.raw.raw_stage/product_category_name_translation.csv
 FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1);
 
 -- ============================================================
--- VALIDATION
+-- VALIDAÇÃO
 -- ============================================================
--- Confirms all tables were loaded with expected row counts.
--- Expected results:
---   customers:   99,441 rows
---   orders:      99,441 rows
---   order_items: 112,650 rows
---   products:    32,951 rows
+-- Confirma que todas as tabelas foram carregadas com as
+-- quantidades esperadas de registros.
+--------------------------------------
+
+-- Resultados esperados:
+--   customers:   99.441 registros
+--   orders:      99.441 registros
+--   order_items: 112.650 registros
+--   products:    32.951 registros
+----------------------------------
+
+-- Diferenças significativas em relação aos volumes esperados
+-- devem ser investigadas antes de prosseguir para a camada STAGING.
 -- ============================================================
 
 SELECT 'customers' AS tabela, COUNT(*) AS total FROM olist_db.raw.customers
