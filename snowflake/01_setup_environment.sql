@@ -1,89 +1,97 @@
 -- ============================================================
--- PROJECT: Olist Pricing Intelligence
--- FILE: 01_setup_environment.sql
--- DESCRIPTION: Initial environment setup for the Olist Pricing
---              Intelligence project. Creates the virtual warehouse,
---              database and the three schema layers following the
---              Medallion Architecture pattern.
--- AUTHOR: Gisele CP
--- DATE: 2026-06-06
+-- PROJETO: Olist Pricing Intelligence
+-- ARQUIVO: 01_setup_environment.sql
+-- DESCRIÇÃO: Configuração inicial do ambiente para o projeto
+--            Olist Pricing Intelligence. Cria o warehouse,
+--            banco de dados e as três camadas de schema seguindo
+--            o padrão de Arquitetura Medallion.
+-- AUTORA: Gisele CP
+-- DATA: 2026-06-06
 -- ============================================================
 
--- MEDALLION ARCHITECTURE OVERVIEW
--- This project follows the Medallion Architecture pattern:
+-- VISÃO GERAL DA ARQUITETURA MEDALLION
+-- Este projeto segue o padrão de Arquitetura Medallion:
 --
--- RAW (Bronze)     -> Landing zone. Data loaded as-is from source.
---                     No transformations. Preserves original data.
+-- RAW (Bronze)     -> Camada de ingestão. Dados carregados
+--                     exatamente como recebidos da origem.
+--                     Nenhuma transformação. Preserva os dados originais.
 --
--- STAGING (Silver) -> Cleaned and enriched layer. Type casting,
---                     null treatment, business rules applied.
---                     Data quality guaranteed.
+-- STAGING (Silver) -> Camada tratada e enriquecida. Conversão
+--                     de tipos, tratamento de nulos e aplicação
+--                     de regras de negócio.
+--                     Aplicação de regras de qualidade e padronização dos dados.
 --
--- MARTS (Gold)     -> Business-ready layer. Star schema modeling.
---                     Aggregated metrics and KPIs for BI consumption
---                     and pricing decision support.
+-- MARTS (Gold)     -> Camada pronta para consumo pelo negócio.
+--                     Modelagem dimensional (Star Schema).
+--                     Métricas agregadas e KPIs para BI
+--                     e suporte a decisões de precificação.
 
 -- ============================================================
--- STEP 1: CREATE VIRTUAL WAREHOUSE
+-- ETAPA 1: CRIAÇÃO DO VIRTUAL WAREHOUSE
 -- ============================================================
--- A virtual warehouse is the compute layer in Snowflake.
--- It processes all SQL queries and data loading operations.
--- X-SMALL size is sufficient for development and this project scale.
--- AUTO_SUSPEND = 60 seconds saves credits when idle.
--- AUTO_RESUME = TRUE ensures the warehouse starts automatically
--- when a new query is submitted.
+-- Um Virtual Warehouse representa a camada computacional
+-- do Snowflake.
+-- Ele processa todas as consultas SQL e operações de carga.
+-- O tamanho X-SMALL é suficiente para desenvolvimento
+-- e para a escala deste projeto.
+-- AUTO_SUSPEND = 60 segundos economiza créditos quando
+-- não há atividade.
+-- AUTO_RESUME = TRUE garante que o warehouse seja iniciado
+-- automaticamente quando uma nova consulta for executada.
 -- ============================================================
 
 CREATE WAREHOUSE IF NOT EXISTS olist_wh
-  WITH WAREHOUSE_SIZE = 'X-SMALL'    -- smallest size, cost optimized for development
-  AUTO_SUSPEND = 60                   -- suspends after 60 seconds of inactivity
-  AUTO_RESUME = TRUE                  -- resumes automatically on new query
-  COMMENT = 'Warehouse for Olist Pricing Intelligence project';
+  WITH WAREHOUSE_SIZE = 'X-SMALL'    -- menor tamanho, otimizado para custos em desenvolvimento
+  AUTO_SUSPEND = 60                  -- suspende após 60 segundos de inatividade
+  AUTO_RESUME = TRUE                 -- reinicia automaticamente quando necessário
+  COMMENT = 'Warehouse do projeto Olist Pricing Intelligence';
 
 -- ============================================================
--- STEP 2: CREATE DATABASE
+-- ETAPA 2: CRIAÇÃO DO BANCO DE DADOS
 -- ============================================================
--- The database is the top-level container in Snowflake.
--- All schemas, tables and objects live inside this database.
--- Using IF NOT EXISTS to make the script idempotent —
--- safe to run multiple times without errors.
+-- O banco de dados é o contêiner principal no Snowflake.
+-- Todos os schemas, tabelas e objetos ficam armazenados nele.
+-- O uso de IF NOT EXISTS torna o script idempotente,
+-- permitindo sua execução múltiplas vezes sem erros.
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS olist_db
   COMMENT = 'Olist Brazilian E-Commerce - Pricing Intelligence';
 
 -- ============================================================
--- STEP 3: CREATE SCHEMAS
+-- ETAPA 3: CRIAÇÃO DOS SCHEMAS
 -- ============================================================
--- Schemas are logical containers inside the database.
--- Each schema represents one layer of the Medallion Architecture.
--- Separating layers ensures data governance and clear lineage:
--- data flows only forward RAW -> STAGING -> MARTS, never backward.
+-- Schemas são contêineres lógicos dentro do banco de dados.
+-- Cada schema representa uma camada da Arquitetura Medallion.
+-- A separação das camadas garante governança de dados e
+-- rastreabilidade (lineage):
+-- os dados fluem apenas RAW -> STAGING -> MARTS,
+-- nunca no sentido contrário.
 -- ============================================================
 
--- RAW layer: receives data exactly as loaded from CSV files
--- No transformations allowed — preserves the original source data
+-- Camada RAW: recebe os dados exatamente como carregados dos arquivos CSV
+-- Nenhuma transformação é permitida — preserva os dados originais da fonte
 CREATE SCHEMA IF NOT EXISTS olist_db.raw
-  COMMENT = 'Raw layer - original data loaded without transformation';
+  COMMENT = 'Camada RAW - dados originais carregados sem transformação';
 
--- STAGING layer: cleaned, typed and enriched data
--- All business rules and data quality treatments applied here
+-- Camada STAGING: dados tratados, tipados e enriquecidos
+-- Todas as regras de negócio e tratamentos de qualidade são aplicados aqui
 CREATE SCHEMA IF NOT EXISTS olist_db.staging
-  COMMENT = 'Staging layer - cleaned and standardized data';
+  COMMENT = 'Camada STAGING - dados limpos e padronizados';
 
--- MARTS layer: business-ready aggregated tables
--- Star schema with facts and dimensions for BI and pricing analysis
+-- Camada MARTS: tabelas prontas para consumo do negócio
+-- Modelagem dimensional com fatos e dimensões para BI e análises de precificação
 CREATE SCHEMA IF NOT EXISTS olist_db.marts
-  COMMENT = 'Marts layer - business ready tables for BI consumption';
+  COMMENT = 'Camada MARTS - tabelas prontas para consumo analítico';
 
 -- ============================================================
--- STEP 4: VALIDATION
+-- ETAPA 4: VALIDAÇÃO
 -- ============================================================
--- Confirms all objects were created successfully.
--- Expected results:
--- SHOW WAREHOUSES -> 1 row: olist_wh
--- SHOW DATABASES  -> 1 row: olist_db
--- SHOW SCHEMAS    -> 4 rows: INFORMATION_SCHEMA, RAW, STAGING, MARTS
+-- Confirma que todos os objetos foram criados com sucesso.
+-- Resultados esperados:
+-- SHOW WAREHOUSES -> 1 linha: olist_wh
+-- SHOW DATABASES  -> 1 linha: olist_db
+-- SHOW SCHEMAS    -> 4 linhas: INFORMATION_SCHEMA, RAW, STAGING, MARTS
 -- ============================================================
 
 SHOW WAREHOUSES LIKE 'olist_wh';
