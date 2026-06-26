@@ -110,8 +110,12 @@ customer_orders AS (
 rfm_scores AS (
     SELECT
         *,
-        NTILE(3) OVER (ORDER BY days_since_last_order ASC) AS recency_score,   -- 3=mais recente
-        NTILE(3) OVER (ORDER BY total_orders DESC) AS frequency_score,          -- 3=mais frequente
+        NTILE(3) OVER (ORDER BY days_since_last_order DESC) AS recency_score,  -- v1.8: DESC correto, 3=mais recente
+        CASE
+            WHEN total_orders >= 3 THEN 3
+            WHEN total_orders = 2  THEN 2
+            ELSE 1
+        END AS frequency_score,                                                 -- v1.8: CASE substitui NTILE (96% clientes com 1 pedido)
         NTILE(3) OVER (ORDER BY total_spent DESC) AS monetary_score             -- 3=maior gasto
     FROM customer_orders
 )
